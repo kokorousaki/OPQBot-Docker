@@ -1,0 +1,13 @@
+基于OPQBot_6.7.5_linux_amd64版本,alpine基础镜像进行制作
+Dockerfile已给出,有需要可以自行修改构建(gn不会懂的,gn怎么可能懂呢,gn只会白嫖)
+
+启动步骤：
+1.执行start
+./start
+若没执行权限请手动添加: chmod u+x start
+
+2.进行配置初始化
+初始化之后会在当前目录生成CoreConf.conf
+(token不填的话OPQ是起不来的，后面有空再做个数值判断)
+
+3.自行摆烂

@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+OPQBOTVER='6.7.5'
+
+if [ `id -u` != 0 ]; then
+    echo -e "\033[31m请使用root用户执行该脚本!\033[0m"
+    exit 1
+fi
+
+docker ps > /dev/null 2>&1
+if [ `echo $?` != 0 ]; then
+    echo -e "\033[31m未检测到Docker程序,请先启动[systemctl start docker]或安装Docker!\033[0m"
+    exit 1
+fi
+
+if [ `docker images | grep 'usaki/opqbot' | grep "${OPQBOTVER}" | wc -l` = 0 ]; then
+    docker pull usaki/opqbot:${OPQBOTVER}
+fi
+
+if_port() {
+    read -p "是否修改OPQBot的监听端口(默认为8888)[Y/n]: " PORTIF
+    case "${PORTIF}" in
+        Y|y|YES|Yes|yes)
+            echo -e "\033[34m请输入要修改的监听端口[1-65535](输错时请按 Ctrl+Backspace 进行删除):\033[0m"
+            read PORT
+            ;;
+        N|n|NO|No|no|*)
+            PORT=8888
+            ;;
+    esac
+}
+
+token_input() {
+    echo -e "\033[34m请输入你的Gitter Token(输错时请按 Ctrl+Backspace 进行删除):\033[0m"
+    read TOKEN
+}
+
+coreconf() {
+    cat > CoreConf.conf << /EOF
+Port = "0.0.0.0:8888"
+WorkerThread = 50
+OPQVer = "v${OPQBOTVER}"
+Token = "${TOKEN}"
+/EOF
+    echo -e "\033[33m配置完成!\033[0m"
+}
+
+start_opq() {
+    if [ `docker ps -a | grep opqbot | wc -l` != 0 ]; then
+        docker rm -f opqbot > /dev/null 2>&1
+    fi
+    docker run -d --name opqbot -p ${PORT}:8888 -v $(pwd)/CoreConf.conf:/usr/local/OPQBot_${OPQBOTVER}_linux_amd64/CoreConf.conf usaki/opqbot:${OPQBOTVER} > /dev/null 2>&1
+    if [ $? = 0 ]; then
+        sleep 3
+        docker ps | grep opqbot | grep "${OPQBOTVER}" > /dev/null 2>&1
+        if [ $? = 0 ]; then
+            echo -e "\033[34mOPQBot启动成功!\033[0m"
+            IPCOLOR=`echo -e "\033[33mhttp://你的IP地址:${PORT}/v1/Login/GetQRcode\033[0m"`
+            echo
+            echo -e "请通过访问 "${IPCOLOR}" 登录你的OPQBot!(请确保端口已开通)"
+            LOGCOLOR=`echo -e "\033[33mdocker logs -f opqbot\033[0m"`
+            echo
+            echo -e "详细日志请通过 "${LOGCOLOR}" 命令查看!"
+        else
+            echo
+            echo -e "\033[31mOPQBot启动失败,请通过 docker logs -f opqbot 命令查看日志信息! \033[0m"
+        fi
+    else
+        echo -e "\033[31mOPQBot启动失败,请通过 docker logs -f opqbot 命令查看日志信息! \033[0m"
+    fi
+}
+
+restart_opq() {
+    if [ `docker ps -a | grep opqbot | grep "${OPQBOTVER}" | wc -l` = 0 ]; then
+        echo -e "\033[31mOPQBot未启动!\033[0m"
+        exit 1
+    else
+        docker restart opqbot > /dev/null 2>&1
+    fi
+    sleep 3
+    docker ps | grep opqbot | grep "${OPQBOTVER}" > /dev/null 2>&1
+    if [ $? = 0 ]; then
+        echo -e "\033[34mOPQBot重启成功!\033[0m"
+    else
+        echo -e "\033[31mOPQBot重启失败,请通过 docker logs opqbot 命令查看日志信息!\033[0m"
+    fi
+}
+
+step_select() {
+    echo -e "\033[36m1.配置初始化\033[0m"
+    echo -e "\033[36m2.启动OPQBot\033[0m"
+    echo -e "\033[36m3.重启OPQBot\033[0m"
+    echo
+    read -p "请选择一个要执行的步骤,按回车键退出[1-2]: " STEP
+    case "$STEP" in
+        1)
+            token_input
+            coreconf
+            echo
+            step_select
+            ;;
+        2)
+            if_port
+            start_opq
+            ;;
+        3)
+            restart_opq
+            ;;
+        *)
+            exit 0
+            ;;
+    esac
+}
+
+step_select
