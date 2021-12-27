@@ -1,5 +1,5 @@
 FROM python:3.8-alpine
-MAINTAINER Usaki
+LABEL maintainer=Usaki
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk --update --no-cache add tzdata g++ gcc libxslt-dev jpeg-dev linux-headers && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
@@ -8,4 +8,4 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
     mkdir /usr/local/botoy && apk del tzdata g++ gcc libxslt-dev jpeg-dev linux-headers
 ADD data/ /usr/local/botoy/
 WORKDIR /usr/local/botoy
-CMD ["botoy","run"]
+ENTRYPOINT ["botoy","run"]
